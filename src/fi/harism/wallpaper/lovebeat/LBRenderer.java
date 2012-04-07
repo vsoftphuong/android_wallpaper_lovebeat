@@ -25,6 +25,7 @@ import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.widget.Toast;
 
 /**
@@ -45,6 +46,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	private final boolean[] mShaderCompilerSupported = new boolean[1];
 	// Shader for copying offscreen texture on screen.
 	private final LBShader mShaderCopy = new LBShader();
+	// Initialize last render time so that on first render iteration environment
+	// is being set up properly.
+	private long mTimeLast = -100000;
 
 	/**
 	 * Default constructor.
@@ -66,7 +70,13 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 			return;
 		}
-
+		
+		long currentTime = SystemClock.uptimeMillis();
+		if (currentTime - mTimeLast > 1000) {
+			mTimeLast = currentTime;
+		}
+		float timeT = (currentTime - mTimeLast) / 1000f;
+		
 		// Disable unneeded rendering flags.
 		GLES20.glDisable(GLES20.GL_CULL_FACE);
 		GLES20.glDisable(GLES20.GL_BLEND);
@@ -75,7 +85,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// Render scene to offscreen FBOs.
 		mLBFbo.bind();
 		mLBFbo.bindTexture(0);
-		mRendererBg.onDrawFrame(mScreenVertices);
+		mRendererBg.onDrawFrame(mScreenVertices, timeT);
 		mLBFbo.bindTexture(1);
 		mRendererFg.onDrawFrame(mScreenVertices);
 
@@ -101,6 +111,11 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 
 		GLES20.glViewport(0, 0, width, height);
 		mLBFbo.init(width, height, 2);
+		
+		mLBFbo.bind();
+		mLBFbo.bindTexture(0);
+		GLES20.glClearColor(0, 0, 0, 1);
+		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);		
 
 		mRendererBg.onSurfaceChanged();
 		mRendererFg.onSurfaceChanged(width, height);

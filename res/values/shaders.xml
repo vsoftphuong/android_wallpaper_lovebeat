@@ -2,23 +2,23 @@
 <resources>
     <string name="shader_background_vs">
         attribute vec2 aPosition;
-        varying vec2 vPosition;
+        uniform vec2 uInterpolators;
+        uniform vec2 uPositions[2];
+        uniform vec2 uNormal;
         void main() {
-            gl_Position = vec4(aPosition, 0.0, 1.0);
-            vPosition = aPosition;
+            vec2 curPos = mix(uPositions[0], uPositions[1], uInterpolators.x);
+            vec2 endPos = mix(uPositions[0], uPositions[1], uInterpolators.y);
+            curPos += (endPos - curPos) * aPosition.x;
+            curPos += uNormal * aPosition.y;
+            
+            gl_Position = vec4(curPos, 0.0, 1.0);
         }
     </string>
     <string name="shader_background_fs">
         precision mediump float;
-        uniform vec3 uBgColor1;
-        uniform vec3 uBgColor2;
-        varying vec2 vPosition;
+        uniform vec3 uColor;
         void main() {
-            if (vPosition.x &gt; vPosition.y) {
-                gl_FragColor = vec4(uBgColor1, 1.0);
-            } else {
-                gl_FragColor = vec4(uBgColor2, 1.0);
-            }
+            gl_FragColor = vec4(uColor, 1.0);
         }
     </string>
     <string name="shader_copy_vs">
