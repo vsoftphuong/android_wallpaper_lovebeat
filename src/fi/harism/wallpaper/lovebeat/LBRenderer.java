@@ -32,20 +32,19 @@ import android.widget.Toast;
  */
 public final class LBRenderer implements GLSurfaceView.Renderer {
 
-	// Current context.
+	// Application context.
 	private Context mContext;
-	// FBO for offscreen rendering.
+	// FBOs for offscreen rendering.
 	private LBFbo mLBFbo = new LBFbo();
+	// Fore- and background renderers.
+	private final LBRendererBg mRendererBg = new LBRendererBg();
+	private final LBRendererFg mRendererFg = new LBRendererFg();
 	// Vertex buffer for full scene coordinates.
 	private ByteBuffer mScreenVertices;
-	// Shader for rendering background gradient.
-	private final LBShader mShaderBackground = new LBShader();
 	// Flag for indicating whether shader compiler is supported.
 	private final boolean[] mShaderCompilerSupported = new boolean[1];
 	// Shader for copying offscreen texture on screen.
 	private final LBShader mShaderCopy = new LBShader();
-	// Surface/screen dimensions.
-	private int mWidth, mHeight;
 
 	/**
 	 * Default constructor.
@@ -73,27 +72,17 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		GLES20.glDisable(GLES20.GL_BLEND);
 		GLES20.glDisable(GLES20.GL_DEPTH_TEST);
 
-		// Set render target to fbo.
+		// Render scene to offscreen FBOs.
 		mLBFbo.bind();
 		mLBFbo.bindTexture(0);
+		mRendererBg.onDrawFrame(mScreenVertices);
+		mLBFbo.bindTexture(1);
+		mRendererFg.onDrawFrame(mScreenVertices);
 
-		// Render background gradient.
-		mShaderBackground.useProgram();
-		int aPosition = mShaderBackground.getHandle("aPosition");
-
-		GLES20.glVertexAttribPointer(aPosition, 2, GLES20.GL_BYTE, false, 0,
-				mScreenVertices);
-		GLES20.glEnableVertexAttribArray(aPosition);
-
-		GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-
-		// TODO: Render scene.
-
-		// Copy FBO to screen buffer.
+		// Copy FBOs to screen buffer.
 		GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
-		GLES20.glViewport(0, 0, mWidth, mHeight);
 		mShaderCopy.useProgram();
-		aPosition = mShaderCopy.getHandle("aPosition");
+		int aPosition = mShaderCopy.getHandle("aPosition");
 		GLES20.glVertexAttribPointer(aPosition, 2, GLES20.GL_BYTE, false, 0,
 				mScreenVertices);
 		GLES20.glEnableVertexAttribArray(aPosition);
@@ -110,9 +99,11 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			return;
 		}
 
-		mWidth = width;
-		mHeight = height;
-		mLBFbo.init(mWidth, mHeight, 1);
+		GLES20.glViewport(0, 0, width, height);
+		mLBFbo.init(width, height, 2);
+
+		mRendererBg.onSurfaceChanged();
+		mRendererFg.onSurfaceChanged(width, height);
 	}
 
 	@Override
@@ -136,9 +127,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 
 		mShaderCopy.setProgram(mContext.getString(R.string.shader_copy_vs),
 				mContext.getString(R.string.shader_copy_fs));
-		mShaderBackground.setProgram(
-				mContext.getString(R.string.shader_background_vs),
-				mContext.getString(R.string.shader_background_fs));
+
+		mRendererBg.onSurfaceCreated(mContext);
+		mRendererFg.onSurfaceCreated(mContext);
 	}
 
 }

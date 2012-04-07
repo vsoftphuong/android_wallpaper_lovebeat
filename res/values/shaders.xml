@@ -2,14 +2,23 @@
 <resources>
     <string name="shader_background_vs">
         attribute vec2 aPosition;
+        varying vec2 vPosition;
         void main() {
             gl_Position = vec4(aPosition, 0.0, 1.0);
+            vPosition = aPosition;
         }
     </string>
     <string name="shader_background_fs">
         precision mediump float;
+        uniform vec3 uBgColor1;
+        uniform vec3 uBgColor2;
+        varying vec2 vPosition;
         void main() {
-            gl_FragColor = vec4(0.2, 0.6, 0.1, 1.0);
+            if (vPosition.x &gt; vPosition.y) {
+                gl_FragColor = vec4(uBgColor1, 1.0);
+            } else {
+                gl_FragColor = vec4(uBgColor2, 1.0);
+            }
         }
     </string>
     <string name="shader_copy_vs">
@@ -24,26 +33,29 @@
         precision mediump float;
         uniform sampler2D sTexture;
         varying vec2 vTextureCoord;
-        void main() {
+        void main() {        
+            const float sqrt2 = 1.4143;
+            const float cornerBorderRadius = 1.2;
+            const float cornerMaxLenInv = 1.0 / (sqrt2 - cornerBorderRadius);
+            
             gl_FragColor = texture2D(sTexture, vTextureCoord);
             
-            const float cornerBorderRadius = 1.1;
             float cornerPos = length((vTextureCoord - 0.5) * 2.0);
             if (cornerPos &gt; cornerBorderRadius) {
-                const float sqrt2 = 1.4143;
-                const float cornerMaxLenInv = 1.0 / (sqrt2 - cornerBorderRadius);
-                
                 float shade = (cornerPos - cornerBorderRadius) * cornerMaxLenInv;
-                shade = floor(shade * 8.0);
-                
-                float shadeMain = mod(shade, 8.0);
+                float shadeMain = mod(shade * 6.0, 6.0);
                 float shadeBool = mod(shadeMain, 2.0);
                 
-                if (shadeBool &lt; 0.1) {
-                    gl_FragColor.rgb *= 0.2;
+                float t;
+                if (clamp(shadeBool, 0.15, 1.0) == shadeBool) {
+                    t = 0.2;
+                } else if (clamp(shadeBool, 1.15, 2.0) == shadeBool) {
+                    t = 1.0 - sqrt(shadeMain * 0.1);
                 } else {
-                    gl_FragColor.rgb *= 1.0 - sqrt(shadeMain * 0.1);
+                    t = (1.0 - sqrt(shadeMain * 0.1)) * 0.7;
                 }
+                
+                gl_FragColor.rgb *= t;
             }
         }
     </string>
