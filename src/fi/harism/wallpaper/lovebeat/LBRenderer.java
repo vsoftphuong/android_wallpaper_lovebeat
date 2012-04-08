@@ -74,8 +74,10 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// Animation tick time length in millis.
 		final long ANIMATION_TICK_TIME = 700;
 		long currentTime = SystemClock.uptimeMillis();
+		boolean newTime = false;
 		if (currentTime - mTimeLast > ANIMATION_TICK_TIME) {
 			mTimeLast = currentTime;
+			newTime = true;
 		}
 		float timeT = (currentTime - mTimeLast) / (float) ANIMATION_TICK_TIME;
 
@@ -87,9 +89,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// Render scene to offscreen FBOs.
 		mLBFbo.bind();
 		mLBFbo.bindTexture(0);
-		mRendererBg.onDrawFrame(timeT);
+		mRendererBg.onDrawFrame(timeT, newTime);
 		mLBFbo.bindTexture(1);
-		mRendererFg.onDrawFrame(mScreenVertices);
+		mRendererFg.onDrawFrame(mScreenVertices, timeT, newTime);
 
 		// Copy FBOs to screen buffer.
 		GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);

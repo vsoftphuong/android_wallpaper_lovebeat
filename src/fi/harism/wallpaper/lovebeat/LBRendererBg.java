@@ -170,13 +170,15 @@ public final class LBRendererBg {
 	 * 
 	 * @param timeT
 	 *            Time interpolator, float between [0f, 1f].
+	 * @param newTime
+	 *            True once new [0f, 1f] timeT range is started.
 	 */
-	public void onDrawFrame(float timeT) {
+	public void onDrawFrame(float timeT, boolean newTime) {
 		// Smooth Hermite interpolation.
 		timeT = timeT * timeT * (3 - 2 * timeT);
 		// Calculate source and target interpolant t values.
 		float sourceT = mLastTimeT;
-		float targetT = timeT >= sourceT ? timeT : 1;
+		float targetT = newTime ? 1 : timeT;
 
 		// Initialize background shader for use.
 		mShaderBg.useProgram();
@@ -207,11 +209,11 @@ public final class LBRendererBg {
 		}
 
 		// Finally update mLastTime and generate new animation if needed.
-		if (timeT >= mLastTimeT) {
-			mLastTimeT = timeT;
-		} else {
+		if (newTime) {
 			mLastTimeT = 0;
 			genRandFillData();
+		} else {
+			mLastTimeT = timeT;
 		}
 	}
 
