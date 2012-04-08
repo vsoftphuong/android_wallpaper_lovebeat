@@ -1,5 +1,5 @@
 /*
-   Copyright 2012 Harri SmŒtt
+   Copyright 2012 Harri Smatt
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -59,6 +59,7 @@ public final class LBEGLConfigChooser implements GLSurfaceView.EGLConfigChooser 
 		egl.eglChooseConfig(display, configSpec, configs, numConfigs, temp);
 
 		int highestSum = 0;
+		int highestSub = 0;
 		EGLConfig highestConfig = null;
 		for (EGLConfig config : configs) {
 			int r = getConfigAttrib(egl, display, config, EGL10.EGL_RED_SIZE,
@@ -73,9 +74,13 @@ public final class LBEGLConfigChooser implements GLSurfaceView.EGLConfigChooser 
 					0, temp);
 			int s = getConfigAttrib(egl, display, config,
 					EGL10.EGL_STENCIL_SIZE, 0, temp);
-			int sum = r + g + b + (mNeedsDepth ? d : -d) - a - s;
-			if (sum > highestSum) {
+
+			int sum = r + g + b + (mNeedsDepth ? d : 0);
+			int sub = a + s;
+
+			if (sum > highestSum || (sum == highestSum && sub < highestSub)) {
 				highestSum = sum;
+				highestSub = sub;
 				highestConfig = config;
 			}
 		}
