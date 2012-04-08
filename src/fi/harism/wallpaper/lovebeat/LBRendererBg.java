@@ -13,7 +13,7 @@ public final class LBRendererBg {
 			"#447718" };
 	// Static color values converted to floats [0.0, 1.0].
 	private float[][] mBgColors;
-	
+
 	// Static coordinate buffer for rendering background.
 	private ByteBuffer mFillBuffer;
 
@@ -21,7 +21,7 @@ public final class LBRendererBg {
 	private StructFillData mFillData[] = new StructFillData[4];
 	// Number of fill data elements for rendering.
 	private int mFillDataCount;
-	
+
 	// Last time interpolator.
 	public float mLastTimeT = 0;
 
@@ -45,53 +45,73 @@ public final class LBRendererBg {
 		for (int i = 0; i < mFillData.length; ++i) {
 			mFillData[i] = new StructFillData();
 		}
-		genRandAnimation();
+		genRandFillData();
 	}
 
-	private void genRandAnimation() {
+	private void genFillData(float x1, float y1, float x2, float y2, float nx,
+			float ny) {
+		// Select random color from predefined colors array.
+		int colorIndex = (int) (Math.random() * mBgColors.length);
+		// Randomly split filling in two independent fill areas.
+		int fillDataCount = Math.random() > 0.8 ? 2 : 1;
+		// Generate fill struct data.
+		for (int curIdx = 0; curIdx < fillDataCount; ++curIdx) {
+			// Take next unused StructFillData.
+			StructFillData fillData = mFillData[mFillDataCount++];
+			// Set common values.
+			fillData.mColorIndex = colorIndex;
+			fillData.mFillNormal[0] = nx;
+			fillData.mFillNormal[1] = ny;
 
-		// TODO: Add new patterns.
+			// Calculate start and end positions using interpolation.
+			float sourceT = (float) curIdx / fillDataCount;
+			float targetT = (float) (curIdx + 1) / fillDataCount;
 
-		mFillDataCount = 2;
-		StructFillData fillData0 = mFillData[0];
-		StructFillData fillData1 = mFillData[1];
-
-		int i = (int) (Math.random() * 3);
-		switch (i) {
-		case 0:
-			genRandFill(fillData0, -1, 0, 1, 0, 0, 1);
-			genRandFill(fillData1, -1, 0, 1, 0, 0, -1);
-			break;
-		case 1:
-			genRandFill(fillData0, -1, 1, 1, 1, 1, -1);
-			genRandFill(fillData1, 1, -1, -1, -1, -1, 1);
-			break;
-		default:
-			genRandFill(fillData0, -1, 1, 1, -1, 1, 1);
-			genRandFill(fillData1, -1, 1, 1, -1, -1, -1);
-			break;
+			// Finally store fill source and target positions. Plus randomly
+			// swap them with each other for "reverse" effect.
+			int posIdx = Math.random() > 0.5 ? 2 : 0;
+			// Calculate new positions using sourceT and targetT.
+			fillData.mFillPositions[posIdx + 0] = x1 + (x2 - x1) * sourceT;
+			fillData.mFillPositions[posIdx + 1] = y1 + (y2 - y1) * sourceT;
+			// Recalculate posIdx so that 0 --> 2 or 2 --> 0.
+			posIdx = (posIdx + 2) % 4;
+			fillData.mFillPositions[posIdx + 0] = x1 + (x2 - x1) * targetT;
+			fillData.mFillPositions[posIdx + 1] = y1 + (y2 - y1) * targetT;
 		}
 
 	}
 
-	private void genRandFill(StructFillData fillData, float x1, float y1,
-			float x2, float y2, float nx, float ny) {
-		// Select random color.
-		fillData.mColorIndex = (int) (Math.random() * mBgColors.length);
-		// Set normal.
-		fillData.mFillNormal[0] = nx;
-		fillData.mFillNormal[1] = ny;
-		// Set fill source and target positions.
-		int i = Math.random() > 0.5 ? 2 : 0;
-		fillData.mFillPositions[i + 0] = x1;
-		fillData.mFillPositions[i + 1] = y1;
-		i = (i + 2) % 4;
-		fillData.mFillPositions[i + 0] = x2;
-		fillData.mFillPositions[i + 1] = y2;
+	private void genRandFillData() {
+		mFillDataCount = 0;
+
+		int i = (int) (Math.random() * 16);
+		switch (i) {
+		case 0:
+			genFillData(-1, 0, 1, 0, 0, 1);
+			genFillData(-1, 0, 1, 0, 0, -1);
+			break;
+		case 1:
+			genFillData(-1, 1, -1, 0, 2, 0);
+			genFillData(-1, -1, -1, 0, 2, 0);
+			break;
+		case 2:
+			genFillData(-1, 1, 1, 1, 1, -1);
+			genFillData(1, -1, -1, -1, -1, 1);
+			break;
+		case 3:
+			genFillData(-1, 1, 1, 1, -1, -1);
+			genFillData(1, -1, -1, -1, 1, 1);
+			break;
+		case 4:
+			genFillData(-1, 1, 1, -1, 1, 1);
+			genFillData(-1, 1, 1, -1, -1, -1);
+			break;
+		}
 	}
 
-	public void onDrawFrame(ByteBuffer screenVertices, float timeT) {
-
+	public void onDrawFrame(float timeT) {
+		// Smooth Hermite interpolation.
+		timeT = timeT * timeT * (3 - 2 * timeT);
 		float startT = mLastTimeT;
 		float endT = timeT >= startT ? timeT : 1;
 
@@ -121,12 +141,9 @@ public final class LBRendererBg {
 			mLastTimeT = timeT;
 		} else {
 			mLastTimeT = 0;
-			genRandAnimation();
+			genRandFillData();
 		}
 
-	}
-
-	public void onSurfaceChanged() {
 	}
 
 	public void onSurfaceCreated(Context ctx) {
