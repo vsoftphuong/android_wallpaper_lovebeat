@@ -28,18 +28,19 @@ public final class LBRendererFg {
 			"#B2DDB3", "#92C680", "#7FB048", "#DCE3B7", "#CDDF91", "#B1CE60",
 			"#8EB739", "#D5E4CA", "#B1E2B7", "#78C296", "#4D946E" };
 
+	private double mAngleUp;
+	private int mAngleUpCounter;
+	private double mAngleUpTarget;
+
 	// Render area aspect ratio.
 	private final float mAspectRatio[] = new float[2];
+
 	private float mBoxColors[][];
 
 	private final StructBox mBoxes[] = new StructBox[8];
 	private int mLoveBeat = 0;
-
 	// Shader for rendering filled foreground boxes.
 	private final LBShader mShaderFg = new LBShader();
-	private final float mVectorUp[] = { 0, 1 };
-
-	private double mVectorUpTarget = -1;
 
 	public LBRendererFg() {
 		// Initialize box struct array.
@@ -65,32 +66,32 @@ public final class LBRendererFg {
 
 	public void onDrawFrame(ByteBuffer screenVertices, float timeT,
 			boolean newTime) {
-
-		timeT = timeT * timeT * (3 - 2 * timeT);
-
+		// Smooth Hermite interpolator.
+		float hermiteT = timeT * timeT * (3 - 2 * timeT);
+		// If we have new time span.
 		if (newTime) {
+			// Increase the beat.
 			++mLoveBeat;
-
-			if (mVectorUpTarget >= 0) {
-				mVectorUp[0] = (float) Math.sin(mVectorUpTarget);
-				mVectorUp[1] = (float) Math.cos(mVectorUpTarget);
-			}
-			if (Math.random() > 0.2) {
-				mVectorUpTarget = -1;
+			// Decrease angle wait counter and generate new up direction once it
+			// goes negative.
+			if (--mAngleUpCounter < 0) {
+				// Generate random up vector direction index.
+				int dirIdx = (int) (Math.random() * 4);
+				// Direction = dir * (PI * 2 / 8).
+				mAngleUpTarget = (dirIdx * Math.PI * 2.0) / 8.0;
+				// Generate random waiting time for rotation.
+				mAngleUpCounter = (int) (Math.random() * 5) + 3;
 			} else {
-				mVectorUpTarget = (int) (Math.random() * 8);
-				mVectorUpTarget *= (Math.PI * 2.0) / 8.0;
+				// Store target for later use.
+				mAngleUp = mAngleUpTarget;
 			}
 		}
 
-		float upX = mVectorUp[0];
-		float upY = mVectorUp[1];
-		if (mVectorUpTarget >= 0) {
-			upX += ((float) Math.sin(mVectorUpTarget) - upX) * timeT;
-			upY += ((float) Math.cos(mVectorUpTarget) - upY) * timeT;
-		}
-		upX *= mAspectRatio[0];
-		upY *= mAspectRatio[1];
+		// Calculate final up vector value for rendering.
+		double angle = mAngleUp + (mAngleUpTarget - mAngleUp) * hermiteT;
+		// Up direction for x and y.
+		float upX = (float) Math.sin(angle) * mAspectRatio[0];
+		float upY = (float) Math.cos(angle) * mAspectRatio[1];
 
 		// Initialize foreground shader for use.
 		mShaderFg.useProgram();
@@ -113,19 +114,26 @@ public final class LBRendererFg {
 				box.mPosSource[0] = box.mPosTarget[0];
 				box.mPosSource[1] = box.mPosTarget[1];
 				box.mScaleSource = box.mScaleTarget;
-				box.mPaused = Math.random() > 0.1;
 
-				if (!box.mPaused) {
-					box.mPosTarget[0] = (float) ((Math.random() * 2.2) - 1.1);
-					box.mPosTarget[1] = (float) ((Math.random() * 2.2) - 1.1);
+				boolean paused = Math.random() > 0.1;
+				if (!paused) {
+					if (box.mPaused) {
+						box.mPaused = false;
+						box.mPosSource[0] = (float) ((Math.random() * 2.2) - 1.1);
+						box.mPosSource[1] = (float) ((Math.random() * 2.2) - 1.1);
+					}
+					box.mPosTarget[0] = (float) ((Math.random() * 1.8) - 0.9);
+					box.mPosTarget[1] = (float) ((Math.random() * 1.8) - 0.9);
 					box.mPosTarget[0] = (Math.round(box.mPosTarget[0] * 10) / 10f);
 					box.mPosTarget[1] = (Math.round(box.mPosTarget[1] * 10) / 10f);
 					box.mScaleTarget = (float) ((Math.random() * 0.1) + 0.1);
 					box.mColorIdx = (int) (Math.random() * mBoxColors.length);
+				} else {
+					// box.mPaused = true;
 				}
 			}
 
-			float t = box.mPaused ? 1f : timeT;
+			float t = box.mPaused ? 1f : hermiteT;
 			float scale = mix(box.mScaleSource, box.mScaleTarget, t);
 			float x = mix(box.mPosSource[0], box.mPosTarget[0], t);
 			float y = mix(box.mPosSource[1], box.mPosTarget[1], t);

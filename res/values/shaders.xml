@@ -6,18 +6,25 @@
         uniform vec2 uPositions[2];
         uniform vec2 uNormal;
         void main() {
-            vec2 curPos = mix(uPositions[0], uPositions[1], uInterpolators.x);
-            vec2 endPos = mix(uPositions[0], uPositions[1], uInterpolators.y);
-            curPos += (endPos - curPos) * aPosition.x;
-            curPos += uNormal * aPosition.y;
+            /* Calculate source and target positions, for interpolants 0 and 1 */
+            vec2 currentPos = mix(uPositions[0], uPositions[1], uInterpolators.x);
+            vec2 targetPos = mix(uPositions[0], uPositions[1], uInterpolators.y);
             
-            gl_Position = vec4(curPos, 0.0, 1.0);
+            /* aPosition.x is either 0 or 1 for adding interpolation */
+            currentPos += (targetPos - currentPos) * aPosition.x;
+            
+            /* aPosition.y is either 0 or 1 for adding normal translation */
+            currentPos += uNormal * aPosition.y;
+            
+            /* Finally store position for fragment shader */
+            gl_Position = vec4(currentPos, 0.0, 1.0);
         }
     </string>
     <string name="shader_background_fs">
         precision mediump float;
         uniform vec3 uColor;
         void main() {
+            /* Not much to do except set color */
             gl_FragColor = vec4(uColor, 1.0);
         }
     </string>
@@ -50,13 +57,16 @@
         uniform vec3 uColor;
         varying vec2 vPosition;
         void main() {
-            vec2 shadowPos = (abs(vPosition) - 0.98) * 50.0;
-            shadowPos = max(shadowPos, vec2(0.0));
-            
+            /* First set default color */
             gl_FragColor = vec4(uColor, 1.0);
-            if (shadowPos.x &gt; 0.0 || shadowPos.y &gt; 0.0) {
-                float shadowT = clamp(length(shadowPos), 0.0, 1.0);
-                gl_FragColor.rgb *= mix(1.0, 0.5, shadowT);
+            
+            /* Crop portion of box are for border */
+            vec2 borderPos = (abs(vPosition) - 0.8) * 5.0;
+            borderPos = max(borderPos, vec2(0.0));
+            
+            /* Discard certain pixels for rounded corners */
+            if (length(borderPos) &gt; 1.0) {
+                discard;
             }
         }
     </string>
