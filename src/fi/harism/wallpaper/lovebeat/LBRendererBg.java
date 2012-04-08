@@ -28,22 +28,18 @@ import android.opengl.GLES20;
 public final class LBRendererBg {
 
 	// Background color array. Colors are supposed to be hex decimals "#RRGGBB".
-	private final String[] BG_COLORS = { "#181718", "#181718", "#353335",
-			"#447718" };
+	private static final String[] BG_COLORS = { "#181718", "#181718",
+			"#353335", "#447718" };
 	// Static color values converted to floats [0.0, 1.0].
-	private float[][] mBgColors;
-
+	private final float[][] mBgColors = new float[BG_COLORS.length][0];
 	// Static coordinate buffer for rendering background.
 	private ByteBuffer mFillBuffer;
-
 	// Fill data elements array.
 	private StructFillData mFillData[] = new StructFillData[4];
 	// Number of fill data elements for rendering.
 	private int mFillDataCount;
-
 	// Last time interpolator.
 	public float mLastTimeT = 0;
-
 	// Shader for rendering filled background area.
 	private final LBShader mShaderBg = new LBShader();
 
@@ -59,7 +55,6 @@ public final class LBRendererBg {
 		mFillBuffer.put(FILL_COORDS).position(0);
 
 		// Convert string color values into floating point ones.
-		mBgColors = new float[BG_COLORS.length][];
 		for (int i = 0; i < BG_COLORS.length; ++i) {
 			// Parse color string into integer.
 			int color = Color.parseColor(BG_COLORS[i]);
@@ -138,9 +133,9 @@ public final class LBRendererBg {
 		// this counter once called.
 		mFillDataCount = 0;
 
-		// Select random integer. For i > max case --> pause.
-		int i = (int) (Math.random() * 16);
-		// TODO: Add comments for cases.
+		// Select random integer for selecting animation.
+		int i = (int) (Math.random() * 5);
+		// TODO: Add comments for case clauses.
 		switch (i) {
 		case 0:
 			genFillData(-1, 0, 1, 0, 0, 1);
@@ -158,7 +153,7 @@ public final class LBRendererBg {
 			genFillData(-1, 1, 1, 1, -1, -1);
 			genFillData(1, -1, -1, -1, 1, 1);
 			break;
-		case 4:
+		default:
 			genFillData(-1, 1, 1, -1, 1, 1);
 			genFillData(-1, 1, 1, -1, -1, -1);
 			break;
@@ -211,7 +206,10 @@ public final class LBRendererBg {
 		// Finally update mLastTime and generate new animation if needed.
 		if (newTime) {
 			mLastTimeT = 0;
-			genRandFillData();
+			// Probability for generating new animation.
+			if (Math.random() > 0.3) {
+				genRandFillData();
+			}
 		} else {
 			mLastTimeT = timeT;
 		}
