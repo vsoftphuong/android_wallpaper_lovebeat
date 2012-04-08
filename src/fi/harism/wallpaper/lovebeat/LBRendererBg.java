@@ -207,7 +207,7 @@ public final class LBRendererBg {
 		if (newTime) {
 			mLastTimeT = 0;
 			// Probability for generating new animation.
-			if (Math.random() > 0.3) {
+			if (Math.random() < 0.3) {
 				genRandFillData();
 			}
 		} else {
