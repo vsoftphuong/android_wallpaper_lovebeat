@@ -50,15 +50,13 @@
         uniform vec3 uColor;
         varying vec2 vPosition;
         void main() {
-            vec2 shadowPos = (abs(vPosition) - 0.95) * 20.0;
+            vec2 shadowPos = (abs(vPosition) - 0.98) * 50.0;
             shadowPos = max(shadowPos, vec2(0.0));
             
+            gl_FragColor = vec4(uColor, 1.0);
             if (shadowPos.x &gt; 0.0 || shadowPos.y &gt; 0.0) {
                 float shadowT = clamp(length(shadowPos), 0.0, 1.0);
-                shadowT = mix(0.2, 0.0, shadowT);
-                gl_FragColor = vec4(vec3(0.0), shadowT);
-            } else {
-                gl_FragColor = vec4(uColor, 1.0);
+                gl_FragColor.rgb *= mix(1.0, 0.5, shadowT);
             }
         }
     </string>

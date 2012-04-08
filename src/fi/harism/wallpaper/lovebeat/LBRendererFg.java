@@ -19,28 +19,43 @@ package fi.harism.wallpaper.lovebeat;
 import java.nio.ByteBuffer;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.opengl.GLES20;
 
 public final class LBRendererFg {
 
-	private static final float UP_VECTORS[][] = { { -1, 1 }, { 0, 1 },
-			{ 1, 1 }, { 1, 0 }, { 1, -1 }, { 0, -1 }, { -1, -1 }, { -1, 0 } };
+	private static final String BOX_COLORS[] = { "#E4E3E4", "#CCE2CE",
+			"#B2DDB3", "#92C680", "#7FB048", "#DCE3B7", "#CDDF91", "#B1CE60",
+			"#8EB739", "#D5E4CA", "#B1E2B7", "#78C296", "#4D946E" };
 
 	// Render area aspect ratio.
 	private final float mAspectRatio[] = new float[2];
-	private final StructBox mBoxes[] = new StructBox[8];
+	private float mBoxColors[][];
 
+	private final StructBox mBoxes[] = new StructBox[8];
 	private int mLoveBeat = 0;
+
 	// Shader for rendering filled foreground boxes.
 	private final LBShader mShaderFg = new LBShader();
+	private final float mVectorUp[] = { 0, 1 };
 
-	private float mVectorUp[] = UP_VECTORS[1];
-
-	private int mVectorUpTarget = -1;
+	private double mVectorUpTarget = -1;
 
 	public LBRendererFg() {
+		// Initialize box struct array.
 		for (int i = 0; i < mBoxes.length; ++i) {
 			mBoxes[i] = new StructBox();
+		}
+		// Convert string color values into floating point ones.
+		mBoxColors = new float[BOX_COLORS.length][];
+		for (int i = 0; i < BOX_COLORS.length; ++i) {
+			// Parse color string into integer.
+			int color = Color.parseColor(BOX_COLORS[i]);
+			// Calculate float values.
+			mBoxColors[i] = new float[3];
+			mBoxColors[i][0] = Color.red(color) / 255f;
+			mBoxColors[i][1] = Color.green(color) / 255f;
+			mBoxColors[i][2] = Color.blue(color) / 255f;
 		}
 	}
 
@@ -57,21 +72,25 @@ public final class LBRendererFg {
 			++mLoveBeat;
 
 			if (mVectorUpTarget >= 0) {
-				mVectorUp = UP_VECTORS[mVectorUpTarget];
+				mVectorUp[0] = (float) Math.sin(mVectorUpTarget);
+				mVectorUp[1] = (float) Math.cos(mVectorUpTarget);
 			}
 			if (Math.random() > 0.2) {
 				mVectorUpTarget = -1;
 			} else {
 				mVectorUpTarget = (int) (Math.random() * 8);
+				mVectorUpTarget *= (Math.PI * 2.0) / 8.0;
 			}
 		}
 
 		float upX = mVectorUp[0];
 		float upY = mVectorUp[1];
 		if (mVectorUpTarget >= 0) {
-			upX += (UP_VECTORS[mVectorUpTarget][0] - upX) * timeT;
-			upY += (UP_VECTORS[mVectorUpTarget][1] - upY) * timeT;
+			upX += ((float) Math.sin(mVectorUpTarget) - upX) * timeT;
+			upY += ((float) Math.cos(mVectorUpTarget) - upY) * timeT;
 		}
+		upX *= mAspectRatio[0];
+		upY *= mAspectRatio[1];
 
 		// Initialize foreground shader for use.
 		mShaderFg.useProgram();
@@ -99,11 +118,10 @@ public final class LBRendererFg {
 				if (!box.mPaused) {
 					box.mPosTarget[0] = (float) ((Math.random() * 2.2) - 1.1);
 					box.mPosTarget[1] = (float) ((Math.random() * 2.2) - 1.1);
-					box.mPosTarget[0] = (Math
-							.round(box.mPosTarget[0] * 10) / 10f);
-					box.mPosTarget[1] = (Math
-							.round(box.mPosTarget[1] * 10) / 10f);
+					box.mPosTarget[0] = (Math.round(box.mPosTarget[0] * 10) / 10f);
+					box.mPosTarget[1] = (Math.round(box.mPosTarget[1] * 10) / 10f);
 					box.mScaleTarget = (float) ((Math.random() * 0.1) + 0.1);
+					box.mColorIdx = (int) (Math.random() * mBoxColors.length);
 				}
 			}
 
@@ -119,7 +137,7 @@ public final class LBRendererFg {
 				mLoveBeat = 0;
 				GLES20.glUniform3f(uColor, .5f, .2f, .15f);
 			} else {
-				GLES20.glUniform3f(uColor, .2f, .5f, .15f);
+				GLES20.glUniform3fv(uColor, 1, mBoxColors[box.mColorIdx], 0);
 			}
 			GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 		}
@@ -137,6 +155,7 @@ public final class LBRendererFg {
 	}
 
 	private final class StructBox {
+		public int mColorIdx;
 		public boolean mPaused = true;
 		public final float mPosSource[] = new float[2];
 		public final float mPosTarget[] = new float[2];
