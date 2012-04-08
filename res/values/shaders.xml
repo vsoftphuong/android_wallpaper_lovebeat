@@ -21,6 +21,47 @@
             gl_FragColor = vec4(uColor, 1.0);
         }
     </string>
+    <string name="shader_foreground_vs">
+        attribute vec2 aPosition;
+        uniform vec2 uAspectRatio;
+        uniform vec2 uCenterPos;
+        uniform vec2 uVectorUp;
+        uniform float uScale;
+        varying vec2 vPosition;
+        void main() {
+            /* Calculate normalized up and right vectors */
+            vec2 vecUp = normalize(uVectorUp);
+            vec2 vecRight = vec2(vecUp.y, -vecUp.x);
+            
+            /* Calculate box coordinates at origo */
+            vec2 pos = (aPosition.x * vecRight) + (aPosition.y * vecUp);
+            pos *= uAspectRatio * uScale;
+            
+            /* Translate box into its position */
+            pos += (uCenterPos.x * vecRight) + (uCenterPos.y * vecUp);
+            
+            /* Store position */
+            gl_Position = vec4(pos, 0.0, 1.0);
+            vPosition = aPosition;
+        }
+    </string>
+    <string name="shader_foreground_fs">
+        precision mediump float;
+        uniform vec3 uColor;
+        varying vec2 vPosition;
+        void main() {
+            vec2 shadowPos = (abs(vPosition) - 0.95) * 20.0;
+            shadowPos = max(shadowPos, vec2(0.0));
+            
+            if (shadowPos.x &gt; 0.0 || shadowPos.y &gt; 0.0) {
+                float shadowT = clamp(length(shadowPos), 0.0, 1.0);
+                shadowT = mix(0.2, 0.0, shadowT);
+                gl_FragColor = vec4(vec3(0.0), shadowT);
+            } else {
+                gl_FragColor = vec4(uColor, 1.0);
+            }
+        }
+    </string>
     <string name="shader_copy_vs">
         attribute vec2 aPosition;
         varying vec2 vTextureCoord;
@@ -31,14 +72,17 @@
     </string>
     <string name="shader_copy_fs">
         precision mediump float;
-        uniform sampler2D sTexture;
+        uniform sampler2D sTextureBg;
+        uniform sampler2D sTextureFg;
         varying vec2 vTextureCoord;
         void main() {        
             const float sqrt2 = 1.4143;
             const float cornerBorderRadius = 1.2;
             const float cornerMaxLenInv = 1.0 / (sqrt2 - cornerBorderRadius);
             
-            gl_FragColor = texture2D(sTexture, vTextureCoord);
+            vec4 colorBg = texture2D(sTextureBg, vTextureCoord);
+            vec4 colorFg = texture2D(sTextureFg, vTextureCoord);
+            gl_FragColor = mix(colorBg, colorFg, colorFg.a);
             
             float cornerPos = length((vTextureCoord - 0.5) * 2.0);
             if (cornerPos &gt; cornerBorderRadius) {

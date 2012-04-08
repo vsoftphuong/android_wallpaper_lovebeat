@@ -72,7 +72,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		}
 
 		// Animation tick time length in millis.
-		final long ANIMATION_TICK_TIME = 700;
+		final long ANIMATION_TICK_TIME = 1000;
 		long currentTime = SystemClock.uptimeMillis();
 		boolean newTime = false;
 		if (currentTime - mTimeLast > ANIMATION_TICK_TIME) {
@@ -88,20 +88,33 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 
 		// Render scene to offscreen FBOs.
 		mLBFbo.bind();
+		// Render background.
 		mLBFbo.bindTexture(0);
 		mRendererBg.onDrawFrame(timeT, newTime);
+		// Render foreground.
 		mLBFbo.bindTexture(1);
+		GLES20.glClearColor(0, 0, 0, 0);
+		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 		mRendererFg.onDrawFrame(mScreenVertices, timeT, newTime);
 
 		// Copy FBOs to screen buffer.
 		GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
 		mShaderCopy.useProgram();
+		int sTextureBg = mShaderCopy.getHandle("sTextureBg");
+		int sTextureFg = mShaderCopy.getHandle("sTextureFg");
 		int aPosition = mShaderCopy.getHandle("aPosition");
+		// Enable vertex coordinate array.
 		GLES20.glVertexAttribPointer(aPosition, 2, GLES20.GL_BYTE, false, 0,
 				mScreenVertices);
 		GLES20.glEnableVertexAttribArray(aPosition);
+		// Set up fore- and background textures.
 		GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
 		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mLBFbo.getTexture(0));
+		GLES20.glUniform1i(sTextureBg, 0);
+		GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
+		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mLBFbo.getTexture(1));
+		GLES20.glUniform1i(sTextureFg, 1);
+		// Render scene to screen buffer.
 		GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 	}
 
