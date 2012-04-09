@@ -101,12 +101,8 @@
             gl_FragColor = mix(colorBg, colorFg, colorFg.a);
             
             /* Adjust pixel color with random coefficient */
-            vec2 seed = vTextureCoord;
-            if (fract(uRandom) &gt; 0.5) {
-                seed = vTextureCoord.yx;
-            }
-            float rand = fract(sin(dot(seed * 16.0 + uRandom, vec2(12.9898,78.233))) * 43758.5453);
-            gl_FragColor.rgb *= mix(0.95, 1.0, rand);
+            float rand = fract(sin(dot(vTextureCoord.yy * 8.0 + uRandom, vec2(12.9898,78.233))) * 43758.5453);
+            gl_FragColor.rgb *= mix(0.93, 1.0, rand);
             
             /* Calculate pixel position from texture coordinate */
             float pixelPos = length((vTextureCoord - 0.5) * 2.0);

@@ -52,7 +52,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	// Static coordinate buffer for rendering background.
 	private ByteBuffer bg_FillBuffer;
 	// Fill data elements array.
-	private StructFillData bg_FillData[] = new StructFillData[4];
+	private final StructFillData bg_FillData[] = new StructFillData[4];
 	// Number of fill data elements for rendering.
 	private int bg_FillDataCount;
 	// Last time interpolator.
@@ -79,7 +79,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	// Application context.
 	private Context mContext;
 	// FBOs for offscreen rendering.
-	private LBFbo mFbo = new LBFbo();
+	private final LBFbo mFbo = new LBFbo();
 	// Rotation angle and rotation animation target (= int * PI / 4).
 	private int mRotationAngle, mRotationAngleTarget;
 	// Vertex buffer for full scene coordinates.
@@ -510,7 +510,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// Set touch coordinates for shader.
 		GLES20.glUniform2fv(uTouchPos, 2, mTouchPositions, 0);
 		// Pass pseudo random number generator seed to shader.
-		GLES20.glUniform1f(uRandom, (float) Math.random() + 50f);
+		GLES20.glUniform1f(uRandom, (float) Math.random() * 10 + 40f);
 		// Enable vertex coordinate array.
 		GLES20.glVertexAttribPointer(aPosition, 2, GLES20.GL_BYTE, false, 0,
 				mScreenVertices);
