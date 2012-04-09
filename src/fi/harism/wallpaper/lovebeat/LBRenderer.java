@@ -49,9 +49,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	private final LBShader mShaderCopy = new LBShader();
 	// Initialize last render time so that on first render iteration environment
 	// is being set up properly.
-	private long mTimeLast = -100000;
+	private long mTimeLast = -1;
 	// Animation tick timer start time in millis.
-	private long mTimeTickStart = 0;
+	private long mTimeTickStart = -1;
 	// True once following touch events. Used for fading away from displacement
 	// mapping and stopping animation timer for the time touch events are being
 	// executed.
@@ -88,9 +88,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		boolean newTime = false;
 
 		// If we're following touch events stop animation timer.
-		if (mTouchFollow) {
+		if (mTouchFollow && mTimeLast >= 0) {
 			mTimeTickStart += currentTime - mTimeLast;
-		} else {
+		} else if (mTimeLast >= 0) {
 			// Adjust "current touch position" towards start touch position in
 			// order to hide displacement effect. Which ends once they are
 			// equal. We use interpolation for smoother transition no matter
@@ -106,7 +106,8 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		mTimeLast = currentTime;
 
 		// If we're out of tick timer bounds.
-		if (currentTime - mTimeTickStart > ANIMATION_TICK_TIME) {
+		if (currentTime - mTimeTickStart > ANIMATION_TICK_TIME
+				|| mTimeTickStart < 0) {
 			mTimeTickStart = currentTime;
 			newTime = true;
 		}
