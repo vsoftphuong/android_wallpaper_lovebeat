@@ -83,7 +83,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		}
 
 		// Animation tick time length in millis.
-		final long ANIMATION_TICK_TIME = 1000;
+		final long ANIMATION_TICK_TIME = 2000;
 		long currentTime = SystemClock.uptimeMillis();
 		boolean newTime = false;
 
