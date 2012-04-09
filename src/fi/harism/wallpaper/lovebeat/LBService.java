@@ -19,6 +19,7 @@ package fi.harism.wallpaper.lovebeat;
 import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.service.wallpaper.WallpaperService;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 
 /**
@@ -55,6 +56,8 @@ public final class LBService extends WallpaperService {
 			mGLSurfaceView.setRenderer(mRenderer);
 			mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 			mGLSurfaceView.onPause();
+
+			setTouchEventsEnabled(true);
 		}
 
 		@Override
@@ -63,6 +66,11 @@ public final class LBService extends WallpaperService {
 			mGLSurfaceView.onDestroy();
 			mGLSurfaceView = null;
 			mRenderer = null;
+		}
+
+		@Override
+		public void onTouchEvent(MotionEvent me) {
+			mRenderer.onTouchEvent(me);
 		}
 
 		@Override
