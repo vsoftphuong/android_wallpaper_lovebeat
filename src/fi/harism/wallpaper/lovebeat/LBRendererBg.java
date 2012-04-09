@@ -28,7 +28,7 @@ import android.opengl.GLES20;
 public final class LBRendererBg {
 
 	// Background color array. Colors are supposed to be hex decimals "#RRGGBB".
-	private static final String[] BG_COLORS = { "#181718", "#181718",
+	private static final String[] BG_COLORS = { "#434043", "#434043",
 			"#353335", "#447718" };
 	// Static color values converted to floats [0.0, 1.0].
 	private final float[][] mBgColors = new float[BG_COLORS.length][0];
@@ -134,28 +134,48 @@ public final class LBRendererBg {
 		mFillDataCount = 0;
 
 		// Select random integer for selecting animation.
-		int i = (int) (Math.random() * 5);
+		int i = (int) (Math.random() * 10);
 		// TODO: Add comments for case clauses.
 		switch (i) {
+		// Vertical and horizontal fills.
 		case 0:
-			genFillData(-1, 0, 1, 0, 0, 1);
-			genFillData(-1, 0, 1, 0, 0, -1);
+			genFillData(-1, 1, -1, -1, 2, 0);
 			break;
 		case 1:
-			genFillData(-1, 1, -1, 0, 2, 0);
-			genFillData(-1, -1, -1, 0, 2, 0);
+			genFillData(-1, 1, 1, 1, 0, -2);
 			break;
 		case 2:
-			genFillData(-1, 1, 1, 1, 1, -1);
-			genFillData(1, -1, -1, -1, -1, 1);
+			genFillData(-1, 1, -1, 0, 2, 0);
+			genFillData(-1, 0, -1, -1, 2, 0);
 			break;
 		case 3:
-			genFillData(-1, 1, 1, 1, -1, -1);
-			genFillData(1, -1, -1, -1, 1, 1);
+			genFillData(-1, 1, 1, 1, 0, -1);
+			genFillData(-1, 0, 1, 0, 0, -1);
 			break;
-		default:
-			genFillData(-1, 1, 1, -1, 1, 1);
-			genFillData(-1, 1, 1, -1, -1, -1);
+		// Diagonal fills.
+		case 4:
+			genFillData(-1, 1, 1, 1, 3, -3);
+			genFillData(-1, 1, -1, -1, 3, -3);
+			break;
+		case 5:
+			genFillData(1, 1, -1, 1, -3, -3);
+			genFillData(1, 1, 1, -1, -3, -3);
+			break;
+		case 6:
+			genFillData(-1, -1, 1, 1, -1.5f, 1.5f);
+			genFillData(-1, -1, 1, 1, 1.5f, -1.5f);
+			break;
+		case 7:
+			genFillData(-1, 1, 1, -1, 1.5f, 1.5f);
+			genFillData(-1, 1, 1, -1, -1.5f, -1.5f);
+			break;
+		case 8:
+			genFillData(-2, 0, 0, 0, 1, 1);
+			genFillData(2, 0, 0, 0, -1, -1);
+			break;
+		case 9:
+			genFillData(2, 0, 0, 0, -1, 1);
+			genFillData(-2, 0, 0, 0, 1, -1);
 			break;
 		}
 	}
