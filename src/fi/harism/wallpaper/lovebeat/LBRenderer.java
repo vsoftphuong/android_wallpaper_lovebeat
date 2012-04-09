@@ -50,7 +50,12 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	// Initialize last render time so that on first render iteration environment
 	// is being set up properly.
 	private long mTimeLast = -100000;
-	private boolean mTouchFadeOut;
+	// Animation tick timer start time in millis.
+	private long mTimeTickStart = 0;
+	// True once following touch events. Used for fading away from displacement
+	// mapping and stopping animation timer for the time touch events are being
+	// executed.
+	private boolean mTouchFollow;
 	// Two { x, y } tuples for touch start and current touch position.
 	private final float mTouchPositions[] = new float[4];
 	// Surface width and height.
@@ -77,23 +82,38 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			return;
 		}
 
-		// If fade out flag set for touch events. We simply adjust
-		// "current touch position" towards start touch position in order to
-		// hide displacement effect. Which happens once they are equal.
-		if (mTouchFadeOut) {
-			mTouchPositions[2] = (mTouchPositions[0] + mTouchPositions[2]) / 2;
-			mTouchPositions[3] = (mTouchPositions[1] + mTouchPositions[3]) / 2;
-		}
-
 		// Animation tick time length in millis.
 		final long ANIMATION_TICK_TIME = 1000;
 		long currentTime = SystemClock.uptimeMillis();
 		boolean newTime = false;
-		if (currentTime - mTimeLast > ANIMATION_TICK_TIME) {
-			mTimeLast = currentTime;
+
+		// If we're following touch events stop animation timer.
+		if (mTouchFollow) {
+			mTimeTickStart += currentTime - mTimeLast;
+		} else {
+			// Adjust "current touch position" towards start touch position in
+			// order to hide displacement effect. Which ends once they are
+			// equal. We use interpolation for smoother transition no matter
+			// what the rendering frame rate is.
+			float t = Math.max(0f, 1f - (currentTime - mTimeLast) * .005f);
+			mTouchPositions[2] = mTouchPositions[0]
+					+ (mTouchPositions[2] - mTouchPositions[0]) * t;
+			mTouchPositions[3] = mTouchPositions[1]
+					+ (mTouchPositions[3] - mTouchPositions[1]) * t;
+		}
+
+		// Store current time.
+		mTimeLast = currentTime;
+
+		// If we're out of tick timer bounds.
+		if (currentTime - mTimeTickStart > ANIMATION_TICK_TIME) {
+			mTimeTickStart = currentTime;
 			newTime = true;
 		}
-		float timeT = (currentTime - mTimeLast) / (float) ANIMATION_TICK_TIME;
+
+		// Calculate time interpolator, a value between [0, 1].
+		float timeT = (currentTime - mTimeTickStart)
+				/ (float) ANIMATION_TICK_TIME;
 
 		// Disable unneeded rendering flags.
 		GLES20.glDisable(GLES20.GL_CULL_FACE);
@@ -148,18 +168,24 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			return;
 		}
 
-		GLES20.glViewport(0, 0, width, height);
-		mLBFbo.init(width, height, 2);
+		// Store surface width and height for later use.
+		mWidth = width;
+		mHeight = height;
 
+		// Set viewport size.
+		GLES20.glViewport(0, 0, mWidth, mHeight);
+		// Initialize two fbo textures.
+		mLBFbo.init(mWidth, mHeight, 2);
+
+		// Bind bacground texture and clear it. This is the only time we do
+		// this, later on it'll be only overdrawn with background renderer.
 		mLBFbo.bind();
 		mLBFbo.bindTexture(0);
 		GLES20.glClearColor(0, 0, 0, 1);
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
-		mRendererFg.onSurfaceChanged(width, height);
-
-		mWidth = width;
-		mHeight = height;
+		// Notify foreground renderer surface has been changed.
+		mRendererFg.onSurfaceChanged(mWidth, mHeight);
 	}
 
 	@Override
@@ -181,9 +207,11 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			return;
 		}
 
+		// Initiate copy shader.
 		mShaderCopy.setProgram(mContext.getString(R.string.shader_copy_vs),
 				mContext.getString(R.string.shader_copy_fs));
 
+		// Initialize back- and foreground renderers.
 		mRendererBg.onSurfaceCreated(mContext);
 		mRendererFg.onSurfaceCreated(mContext);
 	}
@@ -196,17 +224,21 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	 */
 	public void onTouchEvent(MotionEvent me) {
 		switch (me.getAction()) {
+		// On touch down set following flag and initialize touch position start
+		// and current values.
 		case MotionEvent.ACTION_DOWN:
-			mTouchFadeOut = false;
+			mTouchFollow = true;
 			mTouchPositions[0] = mTouchPositions[2] = me.getX() / mWidth;
 			mTouchPositions[1] = mTouchPositions[3] = 1f - (me.getY() / mHeight);
 			break;
+		// On touch move update current position only.
 		case MotionEvent.ACTION_MOVE:
 			mTouchPositions[2] = me.getX() / mWidth;
 			mTouchPositions[3] = 1f - (me.getY() / mHeight);
 			break;
+		// On touch up mark touch follow flag as false.
 		case MotionEvent.ACTION_UP:
-			mTouchFadeOut = true;
+			mTouchFollow = false;
 			break;
 		}
 	}
