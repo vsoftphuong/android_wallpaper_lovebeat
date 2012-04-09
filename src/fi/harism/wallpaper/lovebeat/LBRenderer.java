@@ -17,6 +17,7 @@
 package fi.harism.wallpaper.lovebeat;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -36,8 +37,7 @@ import android.widget.Toast;
 public final class LBRenderer implements GLSurfaceView.Renderer {
 
 	// Background color array. Colors are supposed to be hex decimals "#RRGGBB".
-	private static final String[] BG_COLORS = { "#636063", "#636063",
-			"#535053", "#447718" };
+	private static final String[] BG_COLORS = { "#636063", "#535053", "#447718" };
 	// Foreground color array. Colors are supposed to be hex decimals "#RRGGBB".
 	private static final String FG_COLORS[] = { "#E4E3E4", "#CCE2CE",
 			"#B2DDB3", "#92C680", "#7FB048", "#DCE3B7", "#CDDF91", "#B1CE60",
@@ -189,9 +189,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	 *            Normal y.
 	 */
 	private void bg_GenFillData(float x1, float y1, float x2, float y2,
-			float nx, float ny) {
-		// Select random color from predefined colors array.
-		int colorIndex = (int) (Math.random() * bg_Colors.length);
+			float nx, float ny, int colorIdx) {
 		// Randomly split filling in two independent fill areas.
 		int fillDataCount = Math.random() > 0.8 ? 2 : 1;
 		// Generate fill struct data.
@@ -199,7 +197,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			// Take next unused StructFillData.
 			StructFillData fillData = bg_FillData[bg_FillDataCount++];
 			// Set common values.
-			fillData.mColorIndex = colorIndex;
+			fillData.mColorIndex = colorIdx;
 			fillData.mFillNormal[0] = nx;
 			fillData.mFillNormal[1] = ny;
 
@@ -228,59 +226,63 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// this counter once called.
 		bg_FillDataCount = 0;
 
+		// Generate temporary color index array for selecting two separate
+		// colors randomly.
+		ArrayList<Integer> colorIndices = new ArrayList<Integer>();
+		for (int colorIdx = 0; colorIdx < bg_Colors.length; ++colorIdx) {
+			colorIndices.add(colorIdx);
+		}
+
+		// Pick two random background colors from color index array.
+		// NOTE: There has to be at least two colors available in the array.
+		int bgColor1 = colorIndices.remove((int) (Math.random() * colorIndices
+				.size()));
+		int bgColor2 = colorIndices.remove((int) (Math.random() * colorIndices
+				.size()));
+
 		// Select random integer for selecting animation.
-		int i = (int) (Math.random() * 10);
-		switch (i) {
+		int randPattern = (int) (Math.random() * 8);
+		switch (randPattern) {
 		// Vertical and horizontal fills.
 		// We set up up vector angle here too so that boxes are aligned with
 		// background pattern.
 		case 0:
-			bg_GenFillData(-1, 1, -1, -1, 2, 0);
+			bg_GenFillData(-1, 1, -1, -1, 2, 0, bgColor1);
 			mRotationAngleTarget = 0;
 			break;
 		case 1:
-			bg_GenFillData(-1, 1, 1, 1, 0, -2);
+			bg_GenFillData(-1, 1, 1, 1, 0, -2, bgColor1);
 			mRotationAngleTarget = 2;
 			break;
 		case 2:
-			bg_GenFillData(-1, 1, -1, 0, 2, 0);
-			bg_GenFillData(-1, 0, -1, -1, 2, 0);
+			bg_GenFillData(-1, 1, -1, 0, 2, 0, bgColor1);
+			bg_GenFillData(-1, 0, -1, -1, 2, 0, bgColor2);
 			mRotationAngleTarget = 0;
 			break;
 		case 3:
-			bg_GenFillData(-1, 1, 1, 1, 0, -1);
-			bg_GenFillData(-1, 0, 1, 0, 0, -1);
+			bg_GenFillData(-1, 1, 1, 1, 0, -1, bgColor1);
+			bg_GenFillData(-1, 0, 1, 0, 0, -1, bgColor2);
 			mRotationAngleTarget = 2;
 			break;
 		// Diagonal fills.
 		case 4:
-			bg_GenFillData(-1, 1, 1, 1, 3, -3);
-			bg_GenFillData(-1, 1, -1, -1, 3, -3);
+			bg_GenFillData(-1, 1, 1, 1, 3, -3, bgColor1);
+			bg_GenFillData(-1, 1, -1, -1, 3, -3, bgColor2);
 			mRotationAngleTarget = 3;
 			break;
 		case 5:
-			bg_GenFillData(1, 1, -1, 1, -3, -3);
-			bg_GenFillData(1, 1, 1, -1, -3, -3);
+			bg_GenFillData(1, 1, -1, 1, -3, -3, bgColor1);
+			bg_GenFillData(1, 1, 1, -1, -3, -3, bgColor2);
 			mRotationAngleTarget = 1;
 			break;
 		case 6:
-			bg_GenFillData(-1, -1, 1, 1, -1.5f, 1.5f);
-			bg_GenFillData(-1, -1, 1, 1, 1.5f, -1.5f);
+			bg_GenFillData(-1, -1, 1, 1, -1.5f, 1.5f, bgColor1);
+			bg_GenFillData(-1, -1, 1, 1, 1.5f, -1.5f, bgColor2);
 			mRotationAngleTarget = 1;
 			break;
 		case 7:
-			bg_GenFillData(-1, 1, 1, -1, 1.5f, 1.5f);
-			bg_GenFillData(-1, 1, 1, -1, -1.5f, -1.5f);
-			mRotationAngleTarget = 3;
-			break;
-		case 8:
-			bg_GenFillData(-2, 0, 0, 0, 1, 1);
-			bg_GenFillData(2, 0, 0, 0, -1, -1);
-			mRotationAngleTarget = 1;
-			break;
-		case 9:
-			bg_GenFillData(2, 0, 0, 0, -1, 1);
-			bg_GenFillData(-2, 0, 0, 0, 1, -1);
+			bg_GenFillData(-1, 1, 1, -1, 1.5f, 1.5f, bgColor1);
+			bg_GenFillData(-1, 1, 1, -1, -1.5f, -1.5f, bgColor2);
 			mRotationAngleTarget = 3;
 			break;
 		}
@@ -344,9 +346,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			// Clear last time variable.
 			bg_LastTimeT = 0;
 			// Probability for generating new animation.
-			// if (Math.random() < 0.3) {
-			bg_GenRandFillData();
-			// }
+			if (Math.random() < 0.4) {
+				bg_GenRandFillData();
+			}
 		} else {
 			bg_LastTimeT = timeT;
 		}
