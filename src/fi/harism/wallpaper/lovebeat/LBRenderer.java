@@ -26,6 +26,7 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.view.MotionEvent;
 import android.widget.Toast;
 
 /**
@@ -49,6 +50,11 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	// Initialize last render time so that on first render iteration environment
 	// is being set up properly.
 	private long mTimeLast = -100000;
+	private boolean mTouchFadeOut;
+	// Two { x, y } tuples for touch start and current touch position.
+	private final float mTouchPositions[] = new float[4];
+	// Surface width and height.
+	private int mWidth, mHeight;
 
 	/**
 	 * Default constructor.
@@ -69,6 +75,14 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			GLES20.glClearColor(0, 0, 0, 1);
 			GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 			return;
+		}
+
+		// If fade out flag set for touch events. We simply adjust
+		// "current touch position" towards start touch position in order to
+		// hide displacement effect. Which happens once they are equal.
+		if (mTouchFadeOut) {
+			mTouchPositions[2] = (mTouchPositions[0] + mTouchPositions[2]) / 2;
+			mTouchPositions[3] = (mTouchPositions[1] + mTouchPositions[3]) / 2;
 		}
 
 		// Animation tick time length in millis.
@@ -99,14 +113,21 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 
 		// Copy FBOs to screen buffer.
 		GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+
+		// Enable final copy shader.
 		mShaderCopy.useProgram();
 		int sTextureBg = mShaderCopy.getHandle("sTextureBg");
 		int sTextureFg = mShaderCopy.getHandle("sTextureFg");
+		int uTouchPos = mShaderCopy.getHandle("uTouchPos");
 		int aPosition = mShaderCopy.getHandle("aPosition");
+
+		// Set touch coordinates for shader.
+		GLES20.glUniform2fv(uTouchPos, 2, mTouchPositions, 0);
 		// Enable vertex coordinate array.
 		GLES20.glVertexAttribPointer(aPosition, 2, GLES20.GL_BYTE, false, 0,
 				mScreenVertices);
 		GLES20.glEnableVertexAttribArray(aPosition);
+
 		// Set up fore- and background textures.
 		GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
 		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mLBFbo.getTexture(0));
@@ -114,6 +135,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
 		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mLBFbo.getTexture(1));
 		GLES20.glUniform1i(sTextureFg, 1);
+
 		// Render scene to screen buffer.
 		GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 	}
@@ -135,6 +157,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
 		mRendererFg.onSurfaceChanged(width, height);
+
+		mWidth = width;
+		mHeight = height;
 	}
 
 	@Override
@@ -161,6 +186,29 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 
 		mRendererBg.onSurfaceCreated(mContext);
 		mRendererFg.onSurfaceCreated(mContext);
+	}
+
+	/**
+	 * Touch event callback method.
+	 * 
+	 * @param me
+	 *            Current motion/touch event.
+	 */
+	public void onTouchEvent(MotionEvent me) {
+		switch (me.getAction()) {
+		case MotionEvent.ACTION_DOWN:
+			mTouchFadeOut = false;
+			mTouchPositions[0] = mTouchPositions[2] = me.getX() / mWidth;
+			mTouchPositions[1] = mTouchPositions[3] = 1f - (me.getY() / mHeight);
+			break;
+		case MotionEvent.ACTION_MOVE:
+			mTouchPositions[2] = me.getX() / mWidth;
+			mTouchPositions[3] = 1f - (me.getY() / mHeight);
+			break;
+		case MotionEvent.ACTION_UP:
+			mTouchFadeOut = true;
+			break;
+		}
 	}
 
 }
