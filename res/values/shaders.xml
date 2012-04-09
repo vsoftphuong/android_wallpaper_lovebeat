@@ -83,30 +83,39 @@
         uniform sampler2D sTextureBg;
         uniform sampler2D sTextureFg;
         uniform vec2 uTouchPos[2];
+        uniform float uRandom;
         varying vec2 vTextureCoord;
-        void main() {        
+        void main() {
+            /* Constants */
             const float sqrt2 = 1.4143;
-            const float cornerBorderRadius = 1.2;
-            const float cornerMaxLenInv = 1.0 / (sqrt2 - cornerBorderRadius);
+            const float borderWidth = 1.2;
+            const float borderMaxLenInv = 1.0 / (sqrt2 - borderWidth);
             
-            /*
-        	float c = 1.0 - sqrt(length(vTextureCoord - (uPosition - uDiff)));
-            gl_FragColor = texture2D(sTexture, vTextureCoord + c * uDiff);
-            */
-            
+            /* Displacement mapping calculations */
             float c = 1.0 - sqrt(length(vTextureCoord - uTouchPos[1]));
             vec2 texPos = vTextureCoord + c * (uTouchPos[0] - uTouchPos[1]);
             
+            /* Fetch texture values */
             vec4 colorBg = texture2D(sTextureBg, texPos);
             vec4 colorFg = texture2D(sTextureFg, texPos);
             gl_FragColor = mix(colorBg, colorFg, colorFg.a);
             
-            float cornerPos = length((vTextureCoord - 0.5) * 2.0);
-            if (cornerPos &gt; cornerBorderRadius) {
-                float shade = (cornerPos - cornerBorderRadius) * cornerMaxLenInv;
+            /* Adjust pixel color with random coefficient */
+            vec2 seed = vTextureCoord;
+            if (fract(uRandom) &gt; 0.5) {
+                seed = vTextureCoord.yx;
+            }
+            float rand = fract(sin(dot(seed * 16.0 + uRandom, vec2(12.9898,78.233))) * 43758.5453);
+            gl_FragColor.rgb *= mix(0.95, 1.0, rand);
+            
+            /* Calculate pixel position from texture coordinate */
+            float pixelPos = length((vTextureCoord - 0.5) * 2.0);
+            /* If we are within border area */
+            if (pixelPos &gt; borderWidth) {
+                /* Calculate _rounded_ corners */
+                float shade = (pixelPos - borderWidth) * borderMaxLenInv;
                 float shadeMain = mod(shade * 6.0, 6.0);
                 float shadeBool = mod(shadeMain, 2.0);
-                
                 float t;
                 if (clamp(shadeBool, 0.15, 1.0) == shadeBool) {
                     t = 0.2;
@@ -115,7 +124,6 @@
                 } else {
                     t = (1.0 - sqrt(shadeMain * 0.1)) * 0.7;
                 }
-                
                 gl_FragColor.rgb *= t;
             }
         }
