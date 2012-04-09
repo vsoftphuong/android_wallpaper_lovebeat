@@ -44,7 +44,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			"#8EB739", "#D5E4CA", "#B1E2B7", "#78C296", "#4D946E" };
 
 	/**
-	 * Background variables.
+	 * Background rendering variables.
 	 */
 
 	// Static color values converted to floats [0.0, 1.0].
@@ -61,12 +61,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	private final LBShader bg_Shader = new LBShader();
 
 	/**
-	 * Foreground variables.
+	 * Foreground rendering variables.
 	 */
 
-	private double fg_AngleUp;
-	private int fg_AngleUpCounter;
-	private double fg_AngleUpTarget;
 	private final StructBoxData fg_Boxes[] = new StructBoxData[8];
 	private final float fg_Colors[][] = new float[FG_COLORS.length][];
 	private int fg_LoveBeat = 0;
@@ -83,6 +80,8 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	private Context mContext;
 	// FBOs for offscreen rendering.
 	private LBFbo mFbo = new LBFbo();
+	// Rotation angle and rotation animation target (= int * PI / 4).
+	private int mRotationAngle, mRotationAngleTarget;
 	// Vertex buffer for full scene coordinates.
 	private ByteBuffer mScreenVertices;
 	// Flag for indicating whether shader compiler is supported.
@@ -231,49 +230,66 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 
 		// Select random integer for selecting animation.
 		int i = (int) (Math.random() * 10);
-		// TODO: Add comments for case clauses.
 		switch (i) {
 		// Vertical and horizontal fills.
+		// We set up up vector angle here too so that boxes are aligned with
+		// background pattern.
 		case 0:
 			bg_GenFillData(-1, 1, -1, -1, 2, 0);
+			mRotationAngleTarget = 0;
 			break;
 		case 1:
 			bg_GenFillData(-1, 1, 1, 1, 0, -2);
+			mRotationAngleTarget = 2;
 			break;
 		case 2:
 			bg_GenFillData(-1, 1, -1, 0, 2, 0);
 			bg_GenFillData(-1, 0, -1, -1, 2, 0);
+			mRotationAngleTarget = 0;
 			break;
 		case 3:
 			bg_GenFillData(-1, 1, 1, 1, 0, -1);
 			bg_GenFillData(-1, 0, 1, 0, 0, -1);
+			mRotationAngleTarget = 2;
 			break;
 		// Diagonal fills.
 		case 4:
 			bg_GenFillData(-1, 1, 1, 1, 3, -3);
 			bg_GenFillData(-1, 1, -1, -1, 3, -3);
+			mRotationAngleTarget = 3;
 			break;
 		case 5:
 			bg_GenFillData(1, 1, -1, 1, -3, -3);
 			bg_GenFillData(1, 1, 1, -1, -3, -3);
+			mRotationAngleTarget = 1;
 			break;
 		case 6:
 			bg_GenFillData(-1, -1, 1, 1, -1.5f, 1.5f);
 			bg_GenFillData(-1, -1, 1, 1, 1.5f, -1.5f);
+			mRotationAngleTarget = 1;
 			break;
 		case 7:
 			bg_GenFillData(-1, 1, 1, -1, 1.5f, 1.5f);
 			bg_GenFillData(-1, 1, 1, -1, -1.5f, -1.5f);
+			mRotationAngleTarget = 3;
 			break;
 		case 8:
 			bg_GenFillData(-2, 0, 0, 0, 1, 1);
 			bg_GenFillData(2, 0, 0, 0, -1, -1);
+			mRotationAngleTarget = 1;
 			break;
 		case 9:
 			bg_GenFillData(2, 0, 0, 0, -1, 1);
 			bg_GenFillData(-2, 0, 0, 0, 1, -1);
+			mRotationAngleTarget = 3;
 			break;
 		}
+
+		// Select closest target angle from left or right side of current value.
+		int diff1 = Math.abs(mRotationAngleTarget - mRotationAngle);
+		int diff2 = Math.abs(mRotationAngleTarget - mRotationAngle + 4);
+		mRotationAngleTarget = diff1 <= diff2 ? mRotationAngleTarget
+				: mRotationAngleTarget + 4;
 	}
 
 	/**
@@ -285,8 +301,6 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	 *            True once new [0f, 1f] timeT range is started.
 	 */
 	public void bg_OnDrawFrame(float timeT, boolean newTime) {
-		// Smooth Hermite interpolation.
-		timeT = timeT * timeT * (3 - 2 * timeT);
 		// Calculate source and target interpolant t values.
 		float sourceT = bg_LastTimeT;
 		float targetT = newTime ? 1 : timeT;
@@ -321,43 +335,39 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 
 		// Finally update mLastTime and generate new animation if needed.
 		if (newTime) {
+			// Decrease rotation angle into range [0, 8).
+			while (mRotationAngleTarget >= 8) {
+				mRotationAngleTarget -= 8;
+			}
+			// Store rotation angle target to current value.
+			mRotationAngle = mRotationAngleTarget;
+			// Clear last time variable.
 			bg_LastTimeT = 0;
 			// Probability for generating new animation.
-			if (Math.random() < 0.3) {
-				bg_GenRandFillData();
-			}
+			// if (Math.random() < 0.3) {
+			bg_GenRandFillData();
+			// }
 		} else {
 			bg_LastTimeT = timeT;
 		}
 	}
 
 	public void fg_OnDrawFrame(float timeT, boolean newTime) {
-		// Smooth Hermite interpolator.
-		float hermiteT = timeT * timeT * (3 - 2 * timeT);
 		// If we have new time span.
 		if (newTime) {
 			// Increase the beat.
 			++fg_LoveBeat;
-			// Decrease angle wait counter and generate new up direction once it
-			// goes negative.
-			if (--fg_AngleUpCounter < 0) {
-				// Generate random up vector direction index.
-				int dirIdx = (int) (Math.random() * 4);
-				// Direction = dir * (PI * 2 / 8).
-				fg_AngleUpTarget = (dirIdx * Math.PI * 2.0) / 8.0;
-				// Generate random waiting time for rotation.
-				fg_AngleUpCounter = (int) (Math.random() * 5) + 3;
-			} else {
-				// Store target for later use.
-				fg_AngleUp = fg_AngleUpTarget;
-			}
 		}
 
 		// Calculate final up vector value for rendering.
-		double angle = fg_AngleUp + (fg_AngleUpTarget - fg_AngleUp) * hermiteT;
+		double sourceAngle = (Math.PI * mRotationAngle) / 4;
+		double targetAngle = (Math.PI * mRotationAngleTarget) / 4;
+		double angle = sourceAngle + (targetAngle - sourceAngle) * timeT;
+		// Rotate angle from right to up.
+		angle -= Math.PI / 2;
 		// Up direction for x and y.
-		float upX = (float) Math.sin(angle) * mAspectRatio[0];
-		float upY = (float) Math.cos(angle) * mAspectRatio[1];
+		float upX = (float) Math.cos(angle) * mAspectRatio[0];
+		float upY = (float) Math.sin(angle) * mAspectRatio[1];
 
 		// Initialize foreground shader for use.
 		fg_Shader.useProgram();
@@ -399,7 +409,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 				}
 			}
 
-			float t = box.mPaused ? 1f : hermiteT;
+			float t = box.mPaused ? 1f : timeT;
 			float scale = box.mScaleSource
 					+ (box.mScaleTarget - box.mScaleSource) * t;
 			float x = box.mPosSource[0]
@@ -462,6 +472,8 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// Calculate time interpolator, a value between [0, 1].
 		float timeT = (currentTime - mTimeTickStart)
 				/ (float) ANIMATION_TICK_TIME;
+		// We need only smooth Hermite interpolator.
+		timeT = timeT * timeT * (3 - 2 * timeT);
 
 		// Disable unneeded rendering flags.
 		GLES20.glDisable(GLES20.GL_CULL_FACE);
