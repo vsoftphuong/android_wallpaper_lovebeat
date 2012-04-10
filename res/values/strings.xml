@@ -2,11 +2,11 @@
 <resources>
 
     <!-- General strings -->
-    <string name="app_name">LoveBeat</string>
+    <string name="app_name">The LoveBeat</string>
     <string name="author">harism</string>
-    <string name="description">LoveBeat, live OpenGL 2.0 ES wallpaper.</string>
-    
+    <string name="description">The LoveBeat, live OpenGL 2.0 ES wallpaper. Spot The Beat.</string>
+
     <!-- Error strings -->
-    <string name="error_shader_compiler">Peppy Flowers error; GLSL shader compiler not supported.</string>
-    
+    <string name="error_shader_compiler">LoveBeat error; GLSL shader compiler not supported.</string>
+
 </resources>
