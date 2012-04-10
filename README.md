@@ -3,8 +3,8 @@ Introduction
 
 OpenGL ES 2.0 GLSL based live wallpaper for Android powered devices.
 
-The source code is released under Apache 2.0 and can be used in commercial or personal projects.
-See LICENSE for more information.
+The source code is released under Apache 2.0 license and can be used in commercial
+or personal projects. See LICENSE for more information.
 
 Motivation
 ==========
@@ -20,8 +20,10 @@ this wallpaper was created by combining two rather different sources;
 
 Quite obviously, Lovebeat, the video and the song name, resembles much more into
 this wallpaper in many ways. But reason for mentioning The Love Boat TV series
-is for hopes some of the mood on the show had been transferred too into this
-wallpaper.
+is for hopes some of the mood on the show had been transferred into this
+wallpaper too. You'll be the judge if it did or didn't
 
-Once ready this wallpaper will be published on Android Market. But right now
-source code only has to do.
+You can find precompiled application from Google Play market where latest
+version of the wallpaper ought to be published every now and then;
+
+http://play.google.com/store/apps/details?id=fi.harism.wallpaper.lovebeat
