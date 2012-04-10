@@ -17,13 +17,11 @@
 package fi.harism.wallpaper.lovebeat;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Handler;
@@ -36,19 +34,15 @@ import android.widget.Toast;
  */
 public final class LBRenderer implements GLSurfaceView.Renderer {
 
-	// Background color array. Colors are supposed to be hex decimals "#RRGGBB".
-	private static final String[] BG_COLORS = { "#636063", "#535053", "#447718" };
-	// Foreground color array. Colors are supposed to be hex decimals "#RRGGBB".
-	private static final String FG_COLORS[] = { "#7AC06C", "#72B65D",
-			"#62A050", "#528D30" };
-	private static final String LB_COLOR = "#C28270";
+	// Animation tick time length in millis.
+	private static final long ANIMATION_TICK_TIME = 4000;
+	// Number of foreground boxes.
+	private static final int FG_BOX_COUNT = 16;
 
 	/**
 	 * Background rendering variables.
 	 */
 
-	// Static color values converted to floats [0.0, 1.0].
-	private final float[][] bg_Colors = new float[BG_COLORS.length][];
 	// Static coordinate buffer for rendering background.
 	private ByteBuffer bg_FillBuffer;
 	// Fill data elements array.
@@ -64,8 +58,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	 * Foreground rendering variables.
 	 */
 
-	private final StructBoxData fg_Boxes[] = new StructBoxData[8];
-	private final float fg_Colors[][] = new float[FG_COLORS.length][];
+	// Box data structure array.
+	private final StructBoxData fg_Boxes[] = new StructBoxData[FG_BOX_COUNT];
+	// Value for counting The LoveBeat.
 	private int fg_LoveBeat = 0;
 	// Shader for rendering filled foreground boxes.
 	private final LBShader fg_Shader = new LBShader();
@@ -129,18 +124,6 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		final byte[] FILL_COORDS = { 0, 0, 0, 1, 1, 0, 1, 1 };
 		bg_FillBuffer = ByteBuffer.allocateDirect(8);
 		bg_FillBuffer.put(FILL_COORDS).position(0);
-
-		// Convert string color values into floating point ones.
-		for (int i = 0; i < BG_COLORS.length; ++i) {
-			// Parse color string into integer.
-			int color = Color.parseColor(BG_COLORS[i]);
-			// Calculate float values.
-			bg_Colors[i] = new float[3];
-			bg_Colors[i][0] = Color.red(color) / 255f;
-			bg_Colors[i][1] = Color.green(color) / 255f;
-			bg_Colors[i][2] = Color.blue(color) / 255f;
-		}
-
 		// Instantiate fill data array.
 		for (int i = 0; i < bg_FillData.length; ++i) {
 			bg_FillData[i] = new StructFillData();
@@ -156,15 +139,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		for (int i = 0; i < fg_Boxes.length; ++i) {
 			fg_Boxes[i] = new StructBoxData();
 		}
-		// Convert string color values into floating point ones.
-		for (int i = 0; i < FG_COLORS.length; ++i) {
-			// Parse color string into integer.
-			int color = Color.parseColor(FG_COLORS[i]);
-			// Calculate float values.
-			fg_Colors[i] = new float[3];
-			fg_Colors[i][0] = Color.red(color) / 255f;
-			fg_Colors[i][1] = Color.green(color) / 255f;
-			fg_Colors[i][2] = Color.blue(color) / 255f;
+		// Initialize foreground boxes with random values.
+		for (StructBoxData box : fg_Boxes) {
+			fg_GenRandBox(box);
 		}
 	}
 
@@ -189,7 +166,11 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	 *            Normal y.
 	 */
 	private void bg_GenFillData(float x1, float y1, float x2, float y2,
-			float nx, float ny, int colorIdx) {
+			float nx, float ny) {
+		// Select random background color.
+		float r = (float) (Math.random() * 0.2f) + 0.6f;
+		float g = (float) (Math.random() * 0.3f) + 0.6f;
+		float b = (float) (Math.random() * 0.3f) + 0.6f;
 		// Randomly split filling in two independent fill areas.
 		int fillDataCount = Math.random() > 0.8 ? 2 : 1;
 		// Generate fill struct data.
@@ -197,7 +178,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			// Take next unused StructFillData.
 			StructFillData fillData = bg_FillData[bg_FillDataCount++];
 			// Set common values.
-			fillData.mColorIndex = colorIdx;
+			fillData.mColor[0] = r;
+			fillData.mColor[1] = g;
+			fillData.mColor[2] = b;
 			fillData.mFillNormal[0] = nx;
 			fillData.mFillNormal[1] = ny;
 
@@ -226,20 +209,6 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// this counter once called.
 		bg_FillDataCount = 0;
 
-		// Generate temporary color index array for selecting two separate
-		// colors randomly.
-		ArrayList<Integer> colorIndices = new ArrayList<Integer>();
-		for (int colorIdx = 0; colorIdx < bg_Colors.length; ++colorIdx) {
-			colorIndices.add(colorIdx);
-		}
-
-		// Pick two random background colors from color index array.
-		// NOTE: There has to be at least two colors available in the array.
-		int bgColor1 = colorIndices.remove((int) (Math.random() * colorIndices
-				.size()));
-		int bgColor2 = colorIndices.remove((int) (Math.random() * colorIndices
-				.size()));
-
 		// Select random integer for selecting animation.
 		int randPattern = (int) (Math.random() * 8);
 		switch (randPattern) {
@@ -247,42 +216,42 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// We set up up vector angle here too so that boxes are aligned with
 		// background pattern.
 		case 0:
-			bg_GenFillData(-1, 1, -1, -1, 2, 0, bgColor1);
+			bg_GenFillData(-1, 1, -1, -1, 2, 0);
 			mRotationAngleTarget = 0;
 			break;
 		case 1:
-			bg_GenFillData(-1, 1, 1, 1, 0, -2, bgColor1);
+			bg_GenFillData(-1, 1, 1, 1, 0, -2);
 			mRotationAngleTarget = 2;
 			break;
 		case 2:
-			bg_GenFillData(-1, 1, -1, 0, 2, 0, bgColor1);
-			bg_GenFillData(-1, 0, -1, -1, 2, 0, bgColor2);
+			bg_GenFillData(-1, 1, -1, 0, 2, 0);
+			bg_GenFillData(-1, 0, -1, -1, 2, 0);
 			mRotationAngleTarget = 0;
 			break;
 		case 3:
-			bg_GenFillData(-1, 1, 1, 1, 0, -1, bgColor1);
-			bg_GenFillData(-1, 0, 1, 0, 0, -1, bgColor2);
+			bg_GenFillData(-1, 1, 1, 1, 0, -1);
+			bg_GenFillData(-1, 0, 1, 0, 0, -1);
 			mRotationAngleTarget = 2;
 			break;
 		// Diagonal fills.
 		case 4:
-			bg_GenFillData(-1, 1, 1, 1, 3, -3, bgColor1);
-			bg_GenFillData(-1, 1, -1, -1, 3, -3, bgColor2);
+			bg_GenFillData(-1, 1, 1, 1, 3, -3);
+			bg_GenFillData(-1, 1, -1, -1, 3, -3);
 			mRotationAngleTarget = 3;
 			break;
 		case 5:
-			bg_GenFillData(1, 1, -1, 1, -3, -3, bgColor1);
-			bg_GenFillData(1, 1, 1, -1, -3, -3, bgColor2);
+			bg_GenFillData(1, 1, -1, 1, -3, -3);
+			bg_GenFillData(1, 1, 1, -1, -3, -3);
 			mRotationAngleTarget = 1;
 			break;
 		case 6:
-			bg_GenFillData(-1, -1, 1, 1, -1.5f, 1.5f, bgColor1);
-			bg_GenFillData(-1, -1, 1, 1, 1.5f, -1.5f, bgColor2);
+			bg_GenFillData(-1, -1, 1, 1, -1.5f, 1.5f);
+			bg_GenFillData(-1, -1, 1, 1, 1.5f, -1.5f);
 			mRotationAngleTarget = 1;
 			break;
 		case 7:
-			bg_GenFillData(-1, 1, 1, -1, 1.5f, 1.5f, bgColor1);
-			bg_GenFillData(-1, 1, 1, -1, -1.5f, -1.5f, bgColor2);
+			bg_GenFillData(-1, 1, 1, -1, 1.5f, 1.5f);
+			bg_GenFillData(-1, 1, 1, -1, -1.5f, -1.5f);
 			mRotationAngleTarget = 3;
 			break;
 		}
@@ -330,7 +299,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			GLES20.glUniform2fv(uPositions, 2, fillData.mFillPositions, 0);
 			GLES20.glUniform2fv(uNormal, 1, fillData.mFillNormal, 0);
 			// Store fill data color into shader.
-			GLES20.glUniform3fv(uColor, 1, bg_Colors[fillData.mColorIndex], 0);
+			GLES20.glUniform3fv(uColor, 1, fillData.mColor, 0);
 			// Render fill area.
 			GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 		}
@@ -346,7 +315,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			// Clear last time variable.
 			bg_LastTimeT = 0;
 			// Probability for generating new animation.
-			if (Math.random() < 0.4) {
+			if (Math.random() < 0.3) {
 				bg_GenRandFillData();
 			}
 		} else {
@@ -354,6 +323,42 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		}
 	}
 
+	/**
+	 * Fills box structure with random values.
+	 * 
+	 * @param box
+	 *            Box to be adjusted.
+	 */
+	public void fg_GenRandBox(StructBoxData box) {
+		// Set random target position.
+		box.mPosTarget[0] = (float) ((Math.random() * 1.6) - 0.8);
+		box.mPosTarget[1] = (float) ((Math.random() * 1.6) - 0.8);
+		// Round position to 10x10 grid.
+		box.mPosTarget[0] = (Math.round(box.mPosTarget[0] * 5) / 5f);
+		box.mPosTarget[1] = (Math.round(box.mPosTarget[1] * 5) / 5f);
+		box.mScaleTarget = (float) ((Math.random() * 0.05) + 0.05);
+
+		// If we've hit The LoveBeat limit and are feeling lucky.
+		if (fg_LoveBeat > 10 && Math.random() > 0.2) {
+			fg_LoveBeat = 0;
+			box.mColorTarget[0] = 1.0f;
+			box.mColorTarget[1] = 0.2f;
+			box.mColorTarget[2] = 0.2f;
+		} else {
+			box.mColorTarget[0] = (float) (Math.random() * 0.2) + 0.7f;
+			box.mColorTarget[1] = (float) (Math.random() * 0.3) + 0.7f;
+			box.mColorTarget[2] = (float) (Math.random() * 0.3) + 0.7f;
+		}
+	}
+
+	/**
+	 * Renders foreground onto current frame buffer.
+	 * 
+	 * @param timeT
+	 *            Time interpolator, float between [0f, 1f].
+	 * @param newTime
+	 *            True once new [0f, 1f] timeT range is started.
+	 */
 	public void fg_OnDrawFrame(float timeT, boolean newTime) {
 		// If we have new time span.
 		if (newTime) {
@@ -387,47 +392,47 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 				mScreenVertices);
 		GLES20.glEnableVertexAttribArray(aPosition);
 
+		// Iterate over boxes.
 		for (StructBoxData box : fg_Boxes) {
+			// If we are within new time span.
 			if (newTime) {
+				// Copy target values into source ones.
 				box.mPosSource[0] = box.mPosTarget[0];
 				box.mPosSource[1] = box.mPosTarget[1];
 				box.mScaleSource = box.mScaleTarget;
+				box.mColorSource[0] = box.mColorTarget[0];
+				box.mColorSource[1] = box.mColorTarget[1];
+				box.mColorSource[2] = box.mColorTarget[2];
 
-				boolean paused = Math.random() > 0.1;
-				if (!paused) {
-					if (box.mPaused) {
-						box.mPaused = false;
-						box.mPosSource[0] = (float) ((Math.random() * 2.2) - 1.1);
-						box.mPosSource[1] = (float) ((Math.random() * 2.2) - 1.1);
-					}
-					box.mPosTarget[0] = (float) ((Math.random() * 1.8) - 0.9);
-					box.mPosTarget[1] = (float) ((Math.random() * 1.8) - 0.9);
-					box.mPosTarget[0] = (Math.round(box.mPosTarget[0] * 10) / 10f);
-					box.mPosTarget[1] = (Math.round(box.mPosTarget[1] * 10) / 10f);
-					box.mScaleTarget = (float) ((Math.random() * 0.1) + 0.1);
-					box.mColorIdx = (int) (Math.random() * fg_Colors.length);
-				} else {
-					// box.mPaused = true;
+				// Given some probability generate current box new target
+				// values. Otherwise it is being paused.
+				if (Math.random() > 0.4) {
+					fg_GenRandBox(box);
 				}
 			}
 
-			float t = box.mPaused ? 1f : timeT;
+			// Interpolate scale value.
 			float scale = box.mScaleSource
-					+ (box.mScaleTarget - box.mScaleSource) * t;
+					+ (box.mScaleTarget - box.mScaleSource) * timeT;
+			// Interpolate position values.
 			float x = box.mPosSource[0]
-					+ (box.mPosTarget[0] - box.mPosSource[0]) * t;
+					+ (box.mPosTarget[0] - box.mPosSource[0]) * timeT;
 			float y = box.mPosSource[1]
-					+ (box.mPosTarget[1] - box.mPosSource[1]) * t;
+					+ (box.mPosTarget[1] - box.mPosSource[1]) * timeT;
+			// Interpolate color values.
+			float r = box.mColorSource[0]
+					+ (box.mColorTarget[0] - box.mColorSource[0]) * timeT;
+			float g = box.mColorSource[1]
+					+ (box.mColorTarget[1] - box.mColorSource[1]) * timeT;
+			float b = box.mColorSource[2]
+					+ (box.mColorTarget[2] - box.mColorSource[2]) * timeT;
 
+			// Store uniform values.
 			GLES20.glUniform1f(uScale, scale);
 			GLES20.glUniform2f(uCenterPos, x, y);
-			// TODO: Implement colors.
-			if (fg_LoveBeat > 10 && Math.random() > 0.2) {
-				fg_LoveBeat = 0;
-				GLES20.glUniform3f(uColor, .5f, .2f, .15f);
-			} else {
-				GLES20.glUniform3fv(uColor, 1, fg_Colors[box.mColorIdx], 0);
-			}
+			GLES20.glUniform3f(uColor, r, g, b);
+
+			// Render current box.
 			GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 		}
 	}
@@ -441,8 +446,6 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			return;
 		}
 
-		// Animation tick time length in millis.
-		final long ANIMATION_TICK_TIME = 2000;
 		long currentTime = SystemClock.uptimeMillis();
 		boolean newTime = false;
 
@@ -617,10 +620,15 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	 * Struct for storing box related data.
 	 */
 	private final class StructBoxData {
-		public int mColorIdx;
-		public boolean mPaused = true;
+		// Box source color RGB values.
+		public final float mColorSource[] = new float[3];
+		// Box target color RGB values.
+		public final float mColorTarget[] = new float[3];
+		// Box source position values.
 		public final float mPosSource[] = new float[2];
+		// Box target position values.
 		public final float mPosTarget[] = new float[2];
+		// Box scale source and target values.
 		public float mScaleSource, mScaleTarget;
 	}
 
@@ -630,8 +638,8 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	 * two {x,y} tuples.
 	 */
 	private final class StructFillData {
-		// Color index.
-		public int mColorIndex;
+		// Fill color RGB values.
+		public final float mColor[] = new float[3];
 		// Normal direction.
 		public final float mFillNormal[] = new float[2];
 		// Source and target positions.
