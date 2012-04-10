@@ -509,8 +509,8 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 
 		// Set touch coordinates for shader.
 		GLES20.glUniform2fv(uTouchPos, 2, mTouchPositions, 0);
-		// Pass pseudo random number generator seed to shader.
-		GLES20.glUniform1f(uRandom, (float) Math.random() * 10 + 40f);
+		// Pass seed for GLSL pseudo random number generator.
+		GLES20.glUniform1f(uRandom, ((currentTime / 80) % 10) + 40f);
 		// Enable vertex coordinate array.
 		GLES20.glVertexAttribPointer(aPosition, 2, GLES20.GL_BYTE, false, 0,
 				mScreenVertices);
