@@ -39,9 +39,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	// Background color array. Colors are supposed to be hex decimals "#RRGGBB".
 	private static final String[] BG_COLORS = { "#636063", "#535053", "#447718" };
 	// Foreground color array. Colors are supposed to be hex decimals "#RRGGBB".
-	private static final String FG_COLORS[] = { "#E4E3E4", "#CCE2CE",
-			"#B2DDB3", "#92C680", "#7FB048", "#DCE3B7", "#CDDF91", "#B1CE60",
-			"#8EB739", "#D5E4CA", "#B1E2B7", "#78C296", "#4D946E" };
+	private static final String FG_COLORS[] = { "#7AC06C", "#72B65D",
+			"#62A050", "#528D30" };
+	private static final String LB_COLOR = "#C28270";
 
 	/**
 	 * Background rendering variables.
