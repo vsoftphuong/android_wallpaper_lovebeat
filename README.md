@@ -24,6 +24,7 @@ is for hopes some of the mood on the show had been transferred into this
 wallpaper too. You'll be the judge if it did or didn't
 
 You can find precompiled application from Google Play market where latest
-version of the wallpaper ought to be published every now and then;
+version of the wallpaper ought to be published every now and then.
+If there are changes worth publishing that is;
 
 http://play.google.com/store/apps/details?id=fi.harism.wallpaper.lovebeat
