@@ -75,6 +75,8 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	private Context mContext;
 	// FBOs for offscreen rendering.
 	private final LBFbo mFbo = new LBFbo();
+	// Random number seed for copy shader.
+	private float mRandomSeed;
 	// Rotation angle and rotation animation target (= int * PI / 4).
 	private int mRotationAngle, mRotationAngleTarget;
 	// Vertex buffer for full scene coordinates.
@@ -168,9 +170,7 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 	private void bg_GenFillData(float x1, float y1, float x2, float y2,
 			float nx, float ny) {
 		// Select random background color.
-		float r = (float) (Math.random() * 0.2f) + 0.6f;
-		float g = (float) (Math.random() * 0.3f) + 0.6f;
-		float b = (float) (Math.random() * 0.3f) + 0.6f;
+		float rgb = (float) (Math.random() * 0.5f) + 0.5f;
 		// Randomly split filling in two independent fill areas.
 		int fillDataCount = Math.random() > 0.8 ? 2 : 1;
 		// Generate fill struct data.
@@ -178,9 +178,9 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 			// Take next unused StructFillData.
 			StructFillData fillData = bg_FillData[bg_FillDataCount++];
 			// Set common values.
-			fillData.mColor[0] = r;
-			fillData.mColor[1] = g;
-			fillData.mColor[2] = b;
+			fillData.mColor[0] = rgb;
+			fillData.mColor[1] = rgb;
+			fillData.mColor[2] = rgb;
 			fillData.mFillNormal[0] = nx;
 			fillData.mFillNormal[1] = ny;
 
@@ -341,13 +341,14 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// If we've hit The LoveBeat limit and are feeling lucky.
 		if (fg_LoveBeat > 10 && Math.random() > 0.2) {
 			fg_LoveBeat = 0;
-			box.mColorTarget[0] = 1.0f;
-			box.mColorTarget[1] = 0.2f;
-			box.mColorTarget[2] = 0.2f;
+			box.mColorTarget[0] = 0.9f;
+			box.mColorTarget[1] = 0.4f;
+			box.mColorTarget[2] = 0.4f;
 		} else {
-			box.mColorTarget[0] = (float) (Math.random() * 0.2) + 0.7f;
-			box.mColorTarget[1] = (float) (Math.random() * 0.3) + 0.7f;
-			box.mColorTarget[2] = (float) (Math.random() * 0.3) + 0.7f;
+			float rgb = (float) (Math.random() * 0.7f) + 0.3f;
+			box.mColorTarget[0] = rgb;
+			box.mColorTarget[1] = rgb;
+			box.mColorTarget[2] = rgb;
 		}
 	}
 
@@ -513,7 +514,10 @@ public final class LBRenderer implements GLSurfaceView.Renderer {
 		// Set touch coordinates for shader.
 		GLES20.glUniform2fv(uTouchPos, 2, mTouchPositions, 0);
 		// Pass seed for GLSL pseudo random number generator.
-		GLES20.glUniform1f(uRandom, ((currentTime / 80) % 10) + 40f);
+		if (!mTouchFollow) {
+			mRandomSeed = ((currentTime / 80) % 10) + 40f;
+		}
+		GLES20.glUniform1f(uRandom, mRandomSeed);
 		// Enable vertex coordinate array.
 		GLES20.glVertexAttribPointer(aPosition, 2, GLES20.GL_BYTE, false, 0,
 				mScreenVertices);
