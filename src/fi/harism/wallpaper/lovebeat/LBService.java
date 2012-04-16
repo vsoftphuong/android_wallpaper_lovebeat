@@ -52,7 +52,6 @@ public final class LBService extends WallpaperService {
 
 			mGLSurfaceView = new WallpaperGLSurfaceView(LBService.this);
 			mGLSurfaceView.setEGLContextClientVersion(2);
-			mGLSurfaceView.setEGLConfigChooser(new LBEGLConfigChooser(false));
 			mGLSurfaceView.setRenderer(mRenderer);
 			mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 			mGLSurfaceView.onPause();
